@@ -157,7 +157,7 @@ print 'removing', system.getForce(0)
 system.removeForce(0)
 numParticles = system.getNumParticles()
 daforce = system.getForce(0)
-
+###custom nonbonded
 pairwiseForce = CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1+sigma2); epsilon=sqrt(epsilon1*epsilon2)")
 print('energy', pairwiseForce.getEnergyFunction())
 rangeparticles = range(numParticles)
@@ -171,7 +171,12 @@ for i in rangeparticles:
     print pairwiseForce.getParticleParameters(i)
 #    print pairwiseForce.getPerParticleParameterName(i)
 system.addForce(pairwiseForce)
+###
 
+###harmonic
+harmonic = HarmonicBondForce()
+harmonic.addBond(rangeparticles[-2], rangeparticles[-1], 0.31, 3000)
+system.addForce(harmonic)
 
 
 
