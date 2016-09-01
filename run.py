@@ -29,7 +29,7 @@ system = forcefield.createSystem(pdb.topology,
         nonbondedCutoff=1*nanometer, constraints=HBonds)
 numParticles = system.getNumParticles()
 
-integrator = LangevinIntegrator(2000*kelvin, 1/picosecond, 0.02*picoseconds)
+integrator = LangevinIntegrator(5000*kelvin, 1/picosecond, 0.02*picoseconds)
 zero_masses(system, 0, numParticles-1)
 simulation = Simulation(pdb.topology, system, integrator)
 simulation.context.setPositions(pdb.positions)
@@ -47,7 +47,7 @@ simulation.reporters.append(StateDataReporter('info.csv', 10, step=True,
 print('running')
 fgrps=forcegroupify(system)
 print getEnergyDecomposition(simulation.context, fgrps) 
-for n in range(5000):
+for n in range(50000):
     simulation.step(50)
 #    stateinfo = simulation.context.getState(True, True, True, True, True, True)
 #    forces = stateinfo.getForces()

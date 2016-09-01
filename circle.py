@@ -11,7 +11,7 @@ def writeColumn(data, buffer_lines=2):
     return out_list
 
 #n = 720
-n = 150
+n = 120
 
  
 golden_angle = np.pi * (3 - np.sqrt(5))
@@ -48,7 +48,7 @@ append_list = np.concatenate((append_list,new_list), axis=0)
 
 
  
-n = 54
+n = 24
  
 radius = np.sqrt(np.arange(n) / float(n))
  
@@ -80,9 +80,11 @@ for entry in temp_list:
 
 new_list.append([0,0,0])
 new_list.append([0.5,0,0])
+new_list.append([0.2,0,0])
+new_list.append([0.8,0,0])
 temp_list = np.asarray(temp_list)
 temp_list = np.concatenate((temp_list, new_list), axis=0)
-temp_list = temp_list*0.8
+temp_list = temp_list*0.9
 
 
 
@@ -91,7 +93,7 @@ append_list = np.concatenate((append_list, temp_list), axis=0)
 #append_list = temp_list
 
 append_list = append_list + 3
-append_list = append_list*20
+append_list = append_list*10
 col_data = append_list.tolist()
 for i, entry in enumerate(col_data):
     for j, number in enumerate(entry):
