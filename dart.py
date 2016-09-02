@@ -119,7 +119,9 @@ class SmartDarting(object):
         diffList = []
         indexList = []
         for dart in self.dartboard:
-            diff = dart - com
+#            diff = dart - com
+            diff = com - dart
+
             print 'diff, dart, com', diff, dart, com
             dist = np.sqrt(np.sum((diff)*(diff)))*unit.nanometers
 #            print 'dist', dist
@@ -167,6 +169,9 @@ class SmartDarting(object):
         selectedboard, changevec = dboard.calc_from_center(com=center)
         print('changevec', changevec)
         if selectedboard != None:
+        #notes
+        #comMove is where the com ends up after accounting from where it was from the original dart center
+        #basically where it's final displacement location
             newDartPos = copy.deepcopy(oldDartPos)
             comMove = dboard.redart(changevec)
             print('comMove', comMove)
@@ -329,7 +334,7 @@ for n in range(50):
 #        newDartPE = newDartInfo.getPotentialEnergy()
 #        print('old/newPE', oldDartPE, newDartPE)
     dboard.dartmove(simulation.context)
-    simulation.step(50)
+    simulation.step(500)
 #        if counter == 800:
 #            exit()
 print dboard.acceptance
