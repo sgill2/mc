@@ -169,51 +169,42 @@ class testintegrator:
         """
         self.total_mass = 0
         self.mass_list = None
-        self.firstres = None
-        self.lastres = None
+        self.residueList = None
 
-    def set_res(self, firstres, lastres):
-        self.firstres = firstres
-        self.lastres = lastres
+    def set_res(self, residueList):
+        self.residueList = residueList
 
-    def get_particle_masses(self, system, firstres=None, lastres=None):
-        if firstres == None:
-            firstres = self.firstres
-        if lastres == None:
-            lastres = self.lastres
+    def get_particle_masses(self, system, residueList=None):
+        if residueList == None:
+            residueList = self.residueList
         mass_list = []
         total_mass = 0*unit.dalton
-        for index in range(firstres, lastres):
+        for index in residueList:
             mass = system.getParticleMass(index)
             total_mass = total_mass + mass
+            print('mass', mass, 'total_mass', total_mass)
             mass_list.append([mass])
-        print('MASS TEST\n')
         total_mass = np.sum(mass_list)
         mass_list = np.asarray(mass_list)
         mass_list.reshape((-1,1))
         total_mass = np.array(total_mass)
         total_mass = np.sum(mass_list)
-        temp_list = np.zeros(((lastres-firstres), 1))
-        for index in range(lastres-firstres):
+        temp_list = np.zeros((len(residueList), 1))
+        for index in range(len(residueList)):
             mass_list[index] = (np.sum(mass_list[index])).value_in_unit(unit.daltons)
         mass_list =  mass_list*unit.daltons
-        print('mass_list', mass_list)
-            
-
         self.total_mass = total_mass
         self.mass_list = mass_list
         return total_mass, mass_list
-
-    def zero_masses(self, system, firstres=None, lastres=None):
-        if firstres == None:
-            firstres = self.firstres
-        if lastres == None:
-            lastres = self.lastres
-        for index in range(firstres, lastres):
+            
+    def zero_masses(self, system, residueList=None):
+        if residueList == None:
+            residueList = self.residueList
+        for index in (residueList):
             system.setParticleMass(index, 0*unit.daltons)
         
 
-    def calculate_com(self, total_mass, mass_list, pos_state, firstres=None, lastres=None):
+    def calculate_com(self, total_mass, mass_list, pos_state, residueList=None, rotate=True):
         """
         This controls the ability to run a ncmc simulation with MD
 
@@ -231,35 +222,48 @@ class testintegrator:
             positions of ligand after random rotation
 
         """
-        if firstres == None:
-            firstres = self.firstres
-        if lastres == None:
-            lastres = self.lastres
+        if residueList == None:
+            residueList = self.residueList
+        if mass_list == None:
+            mass_list = self.mass_list
+        if total_mass == None:
+            total_mass = self.total_mass
+        if mass_list == None:
+            mass_list = self.mass_list
+
         #choose ligand indicies
-        lig_coord = copy.deepcopy(pos_state)[firstres:lastres]
-        lig_coord = lig_coord.value_in_unit(unit.nanometers)*unit.nanometers
+        copy_orig = copy.deepcopy(pos_state)
+        lig_coord = np.zeros((len(residueList), 3))
+        for index, resnum in enumerate(residueList):
+            lig_coord[index] = copy_orig[resnum]
+            print lig_coord
+        lig_coord = lig_coord*unit.nanometers
         copy_coord = copy.deepcopy(lig_coord)
         #mass corrected coordinates (to find COM)
+#        print('mass_list', mass_list)
+#        print('total_mass', total_mass)
+#        print('copy_coord', copy_coord)
         mass_corrected = mass_list / total_mass * copy_coord
         sum_coord = mass_corrected.sum(axis=0).value_in_unit(unit.nanometers)
-        temp_coord = [0.0, 0.0, 0.0]*unit.nanometers
+        com_coord = [0.0, 0.0, 0.0]*unit.nanometers
         #units are funky, so do this step to get them to behave right
         for index in range(3):
-            temp_coord[index] = sum_coord[index]*unit.nanometers
+            com_coord[index] = sum_coord[index]*unit.nanometers
+        if rotate ==True:
+            for index in range(3):
+                lig_coord[:,index] = lig_coord[:,index] - com_coord[index]
+            #multiply lig coordinates by rot matrix and add back COM translation from origin
+            rotation =  np.dot(lig_coord.value_in_unit(unit.nanometers), rand_rotation_matrix2())*unit.nanometers
+            rotation = rotation + com_coord
+            return rotation
+        else:    
         #remove COM from ligand coordinates to then perform rotation
-        for index in range(3):
-            lig_coord[:,index] = lig_coord[:,index] - temp_coord[index]
-        #multiply lig coordinates by rot matrix and add back COM translation from origin
-        rotation =  np.dot(lig_coord.value_in_unit(unit.nanometers), rand_rotation_matrix2())*unit.nanometers
-        rotation = rotation + temp_coord
-        return rotation    
+            return com_coord            #remove COM from ligand coordinates to then perform rotation
 
 
-    def testintegrator(self, md_simulation, nc_context, nc_integrator, dummy_simulation, nstepsNC=25, nstepsMD=1000, niter=10, periodic=True, verbose=False, firstres=None, lastres=None, alchemical_correction=False, rot_report=False, ncmc_report=False, origPos=None):
-        if firstres == None:
-            firstres = self.firstres
-        if lastres == None:
-            lastres = self.lastres
+    def testintegrator(self, md_simulation, nc_context, nc_integrator, dummy_simulation, nstepsNC=25, nstepsMD=1000, niter=10, periodic=True, verbose=False, residueList=None, alchemical_correction=False, rot_report=False, ncmc_report=False, origPos=None):
+        if residueList == None:
+            residueList = self.residueList
         #set up initial counters/ inputs
         accCounter = 0
         otherCounter = 0
@@ -296,10 +300,11 @@ class testintegrator:
             #if active, performs the rotation of the ligand
                 if rot_report == True:
                     rot_reporter.add_frame(nc_context)
-                rot_output = self.calculate_com(total_mass=self.total_mass, mass_list=self.mass_list, pos_state=oldPos, firstres=firstres, lastres=lastres)
+                rot_output = self.calculate_com(total_mass=self.total_mass, mass_list=self.mass_list, pos_state=oldPos, residueList=residueList)
                 rot_output = rot_output[:].value_in_unit(unit.nanometers)
                 rotPos = oldPos.value_in_unit(unit.nanometers)
-                rotPos[firstres:lastres] = rot_output
+                for index, resnum in enumerate(residueList):
+                    rotPos[resnum] = rot_output[index]
                 rotPos[:] = rotPos*unit.nanometers
                 nc_context.setPositions(rotPos)
                 if rot_report == True:
@@ -825,8 +830,8 @@ if 1:
 
     numIter = 10
     test_class = testintegrator()
-    test_class.set_res(firstres, lastres)
-    test_class.get_particle_masses(testsystem.system, firstres, lastres)
+    test_class.set_res(ligand_atoms)
+    test_class.get_particle_masses(testsystem.system, residueList = ligand_atoms)
     for i in range(5000):
         md_info = md_simulation.context.getState(True, False, False, False, False, periodic)
         origPos = md_info.getPositions(asNumpy=True)
